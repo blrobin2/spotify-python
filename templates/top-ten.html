@@ -3,13 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <title>Top Ten Artists for {{ username }}</title>
+    <style>
+        .chart-container {
+            height: 450px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <h1>Top 10 Artists for {{ username }}</h1>
-    <ul>
-        {% for artist,count in artists %}
-            <li>{{ artist }} : {{ count }}</li>
-        {% endfor %}
-    </ul>
+    <div id="chart-container" class="chart-container">
+
+    </div>
+    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+    <script>
+        window.onload = function() {
+            const dataPoints = [];
+            const chart = new CanvasJS.Chart('chart-container', {
+                animationEnabled: true,
+                title: {
+                    text: "Top 10 Artists for {{ username }}"
+                },
+                axisX: {
+                    interval: 1
+                },
+                axisY2: {
+                    interlacedColor: "rgba(1,77,101,.2)",
+                    gridColor: "rgba(1,77,101,.1)",
+                    title: "# Occurrences in Playlists"
+                },
+                data: [{
+                    type: "bar",
+                    name: "artists",
+                    axisYType: "secondary",
+                    color: "#014D65",
+                    dataPoints: dataPoints
+                }]
+            });
+
+            fetch('/api/top-ten/{{ username }}')
+                .then(res => res.json())
+                .then(({ data }) => {
+                    data.forEach(([artist, count]) => {
+                       dataPoints.push({
+                            label: artist,
+                            y: count
+                       });
+
+                       console.log(dataPoints);
+
+                       chart.render();
+                    });
+                });
+        }
+    </script>
 </body>
 </html>
