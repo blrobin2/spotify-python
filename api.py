@@ -3,7 +3,6 @@ import os
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from collections import Counter
-from pprint import pprint
 from tqdm import tqdm
 
 
@@ -26,7 +25,7 @@ def get_top_ten_artists(username, show_progress_bar=False):
     :param username: (string) the Spotify username
     :param show_progress_bar: (bool) whether or not to render  progress bar.
                                 Mostly used for running this script directly
-    :return: list of tuples containing artist name and the count
+    :return: [(string: artist name, int: count)]
     """
     progress_bar = None
     sp = init_spotify_api()
@@ -39,19 +38,20 @@ def get_top_ten_artists(username, show_progress_bar=False):
     if show_progress_bar:
         progress_bar = tqdm(
             total=len(owner_playlists),
-            unit='playlist'
+            unit='playlist',
+            leave=False,
         )
 
     for playlist in owner_playlists:
         results = sp.user_playlist(username, playlist.get('id'), fields="tracks,next")
         tracks = results.get('tracks')
 
-        for i, item in enumerate(tracks.get('items')):
+        for item in tracks.get('items'):
             artists.append(get_artist_from_item(item))
 
         while tracks.get('next'):
             tracks = sp.next(tracks)
-            for i, item in enumerate(tracks.get('items')):
+            for item in tracks.get('items'):
                 artists.append(get_artist_from_item(item))
 
         if show_progress_bar and progress_bar is not None:
@@ -80,4 +80,5 @@ if __name__ == '__main__':
 
     print("Checking artist in each playlist: ")
     top_ten = get_top_ten_artists(username, show_progress_bar=True)
-    pprint(top_ten)
+    for i, (artist, count) in enumerate(top_ten):
+        print(f"-> {i+1}. {artist}: {count} times")
