@@ -5,7 +5,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from collections import Counter
 from pprint import pprint
 from tqdm import tqdm
-
+from concurrent.futures import ThreadPoolExecutor as PoolExecutor
 
 def init_spotify_api():
     client_credentials_manager = SpotifyClientCredentials(
@@ -31,22 +31,24 @@ def get_top_ten_artists(username, show_progress_bar=False):
             unit='playlist'
         )
 
-    for playlist in owner_playlists:
-        results = sp.user_playlist(username, playlist.get('id'), fields="tracks,next")
-        tracks = results.get('tracks')
-
-        for i, item in enumerate(tracks.get('items')):
-            track = item.get('track')
-            artists.append(track['artists'][0]['name'])
-
-        while tracks.get('next'):
-            tracks = sp.next(tracks)
+    with PoolExecutor(max_workers=4) as executor:
+        for results in executor.map(
+                lambda playlist: sp.user_playlist(username, playlist.get('id'), fields="tracks,next"),
+                owner_playlists
+        ):
+            tracks = results.get('tracks')
             for i, item in enumerate(tracks.get('items')):
                 track = item.get('track')
                 artists.append(track['artists'][0]['name'])
 
-        if show_progress_bar and progress_bar is not None:
-            progress_bar.update()
+            while tracks.get('next'):
+                tracks = sp.next(tracks)
+                for i, item in enumerate(tracks.get('items')):
+                    track = item.get('track')
+                    artists.append(track['artists'][0]['name'])
+
+            if show_progress_bar and progress_bar is not None:
+                progress_bar.update()
 
     return Counter(artists).most_common(10)
 
