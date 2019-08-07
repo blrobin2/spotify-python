@@ -8,54 +8,114 @@
             height: 450px;
             width: 100%;
         }
+
+        .loading {
+            margin: 0 auto;
+            text-align: center;
+            font-family: sans-serif;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Top 10 Artists for {{ username }}</h1>
-    <div id="chart-container" class="chart-container">
+<div id="loading" class="loading">
+    <h1>Fetching playlist data for {{username}} from Spotify</h1>
+    <svg width="200px" height="200px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"
+         preserveAspectRatio="xMidYMid" class="lds-double-ring" style="background: none;">
+        <circle cx="50" cy="50" ng-attr-r="{{config.radius}}" ng-attr-stroke-width="{{config.width}}"
+                ng-attr-stroke="{{config.c1}}" ng-attr-stroke-dasharray="{{config.dasharray}}" fill="none"
+                stroke-linecap="round" r="40" stroke-width="4" stroke="rgb(255, 99, 132)"
+                stroke-dasharray="62.83185307179586 62.83185307179586" transform="rotate(356.371 50.0002 50.0001)">
+            <animateTransform attributeName="transform" type="rotate" calcMode="linear" values="0 50 50;360 50 50"
+                              keyTimes="0;1" dur="5s" begin="0s" repeatCount="indefinite"></animateTransform>
+        </circle>
+        <circle cx="50" cy="50" ng-attr-r="{{config.radius2}}" ng-attr-stroke-width="{{config.width}}"
+                ng-attr-stroke="{{config.c2}}" ng-attr-stroke-dasharray="{{config.dasharray2}}"
+                ng-attr-stroke-dashoffset="{{config.dashoffset2}}" fill="none" stroke-linecap="round" r="35"
+                stroke-width="4" stroke="rgb(54, 162, 235)" stroke-dasharray="54.97787143782138 54.97787143782138"
+                stroke-dashoffset="54.97787143782138" transform="rotate(-356.371 50.0001 50.0002)">
+            <animateTransform attributeName="transform" type="rotate" calcMode="linear" values="0 50 50;-360 50 50"
+                              keyTimes="0;1" dur="5s" begin="0s" repeatCount="indefinite"></animateTransform>
+        </circle>
+    </svg>
+</div>
+<canvas id="chart-container"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+<script>
+        const canvas = document.getElementById('chart-container');
+        const ctx = canvas.getContext('2d');
+        const loading = document.getElementById('loading');
 
-    </div>
-    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
-    <script>
-        window.onload = function() {
-            const dataPoints = [];
-            const chart = new CanvasJS.Chart('chart-container', {
-                animationEnabled: true,
-                title: {
-                    text: "Top 10 Artists for {{ username }}"
-                },
-                axisX: {
-                    interval: 1
-                },
-                axisY2: {
-                    interlacedColor: "rgba(1,77,101,.2)",
-                    gridColor: "rgba(1,77,101,.1)",
-                    title: "# Occurrences in Playlists"
-                },
-                data: [{
-                    type: "bar",
-                    name: "artists",
-                    axisYType: "secondary",
-                    color: "#014D65",
-                    dataPoints: dataPoints
-                }]
+        const resize_canvas = data => () => {
+            canvas.width = window.innerWidth;
+            drawGraph(data);
+        };
+
+        fetch('/api/top-ten/{{ username }}')
+            .then(res => res.json())
+            .then(({ data }) => {
+                data.shift();
+                const labels = data.map(([artist, _]) => artist);
+                const values = data.map(([_, count]) => count);
+
+                chart_data = {
+                    labels: labels,
+                    datasets: [{
+                        label: "Top 10 Artists for {{ username }}",
+                        data: values,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)',
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)',
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+
+                loading.style.display = 'none';
+                window.addEventListener('resize', resize_canvas(chart_data), false);
+                resize_canvas(chart_data)();
             });
 
-            fetch('/api/top-ten/{{ username }}')
-                .then(res => res.json())
-                .then(({ data }) => {
-                    data.forEach(([artist, count]) => {
-                       dataPoints.push({
-                            label: artist,
-                            y: count
-                       });
-
-                       console.log(dataPoints);
-
-                       chart.render();
-                    });
-                });
+        function drawGraph(data) {
+            new Chart(ctx, {
+                type: 'horizontalBar',
+                data: data,
+                options: {
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
         }
-    </script>
+
+</script>
 </body>
 </html>
