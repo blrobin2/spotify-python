@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Top Ten Artists for {{ username }}</title>
+</head>
+<body>
+    <h1>Top 10 Artists for {{ username }}</h1>
+    <ul>
+        {% for artist,count in artists %}
+            <li>{{ artist }} : {{ count }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

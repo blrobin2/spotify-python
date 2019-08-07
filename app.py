@@ -1,11 +1,15 @@
-from flask import Flask, jsonify
+from flask import Flask, render_template
 
 from api import get_top_ten_artists
 
 app = Flask(__name__)
 
 
-@app.route('/api/artists/top-ten/', methods=['GET'])
-def top_ten_artists():
-    top_ten = get_top_ten_artists('blrobin2')
-    return jsonify({"data": top_ten})
+@app.route('/top-ten/<username>', methods=['GET'])
+def top_ten_artists(username):
+    artists = get_top_ten_artists(username)
+    return render_template(
+        'top-ten.html',
+        username=username,
+        artists=artists
+    )
