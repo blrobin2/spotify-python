@@ -4,15 +4,31 @@
     <meta charset="UTF-8">
     <title>Top Ten Artists for {{ username }}</title>
     <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        .chart {
+            padding: 2em;
+        }
+
         .chart-container {
-            height: 450px;
+            max-height: 450px;
             width: 100%;
         }
 
         .loading {
             margin: 0 auto;
             text-align: center;
-            font-family: sans-serif;
+        }
+
+        .download-csv {
+            color: #222;
+            background: rgba(54, 162, 235, 0.2);
+            text-decoration: none;
+            padding: 1em;
+            border-radius: .5em;
+            border: 1px solid rgba(54, 162, 235, 1);
         }
 
     </style>
@@ -39,12 +55,20 @@
         </circle>
     </svg>
 </div>
-<canvas id="chart-container"></canvas>
+<div id="chart" class="chart" style="display:none">
+    <div>
+        <a id="download-csv" class="download-csv">Download as CSV</a>
+    </div>
+    <canvas id="chart-container"></canvas>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
 <script>
         const canvas = document.getElementById('chart-container');
         const ctx = canvas.getContext('2d');
         const loading = document.getElementById('loading');
+        const chart = document.getElementById('chart');
+        const download_csv = document.getElementById('download-csv');
 
         const resize_canvas = data => () => {
             canvas.width = window.innerWidth;
@@ -61,7 +85,7 @@
                 chart_data = {
                     labels: labels,
                     datasets: [{
-                        label: "Top 10 Artists for {{ username }}",
+                        label: "# Occurrences of artists in {{ username }}'s playlists",
                         data: values,
                         backgroundColor: [
                             'rgba(255, 99, 132, 0.2)',
@@ -96,8 +120,19 @@
                 };
 
                 loading.style.display = 'none';
+                chart.style.display = 'block';
+
+                download_csv.href = window.URL.createObjectURL(new Blob([data_to_csv(data)]));
+                download_csv.download = "top-ten.xlsx";
+
                 resize_canvas(chart_data)();
             });
+
+        function data_to_csv(data) {
+            return [['Artist', '# Occurrences in Playlists'], ...data]
+                .map((row, index) => row.join(','))
+                .join('\n');
+        }
 
         function drawGraph(data) {
             new Chart(ctx, {
