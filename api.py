@@ -8,6 +8,10 @@ from tqdm import tqdm
 
 
 def init_spotify_api():
+    """
+    Uses the environment to initialize the Spotify API
+    :return: Spotify object
+    """
     client_credentials_manager = SpotifyClientCredentials(
         client_id=os.environ.get('SPOTIFY_CLIENT_ID'),
         client_secret=os.environ.get('SPOTIFY_CLIENT_SECRET')
@@ -17,6 +21,13 @@ def init_spotify_api():
 
 
 def get_top_ten_artists(username, show_progress_bar=False):
+    """
+    Fetches the ten artists that are most regularly added to the given user's Spotify playlists
+    :param username: (string) the Spotify username
+    :param show_progress_bar: (bool) whether or not to render  progress bar.
+                                Mostly used for running this script directly
+    :return: list of tuples containing artist name and the count
+    """
     progress_bar = None
     sp = init_spotify_api()
     playlists = sp.user_playlists(username)
@@ -36,19 +47,27 @@ def get_top_ten_artists(username, show_progress_bar=False):
         tracks = results.get('tracks')
 
         for i, item in enumerate(tracks.get('items')):
-            track = item.get('track')
-            artists.append(track['artists'][0]['name'])
+            artists.append(get_artist_from_item(item))
 
         while tracks.get('next'):
             tracks = sp.next(tracks)
             for i, item in enumerate(tracks.get('items')):
-                track = item.get('track')
-                artists.append(track['artists'][0]['name'])
+                artists.append(get_artist_from_item(item))
 
         if show_progress_bar and progress_bar is not None:
             progress_bar.update()
 
     return Counter(artists).most_common(10)
+
+
+def get_artist_from_item(item):
+    """
+    Looks in the given item from Spotify api to fetch the artist
+    :param item: the item as given from spotify
+    :return: (string) the artist name
+    """
+    track = item.get('track')
+    return track['artists'][0]['name']
 
 
 if __name__ == '__main__':
