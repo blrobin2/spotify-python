@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, make_response, render_template
 
-from api import get_top_ten_artists
+from api import Api
 from helpers import to_csv_response
 
 app = Flask(__name__)
@@ -8,13 +8,13 @@ app = Flask(__name__)
 
 @app.route('/api/top-ten/<username>')
 def top_ten_artists_json(username):
-    artists = get_top_ten_artists(username)
+    artists = Api(username).get_top_ten_artists()
     return jsonify({'data': artists})
 
 
 @app.route('/csv/top-ten/<username>')
 def top_ten_artists_csv(username):
-    artists = get_top_ten_artists(username)
+    artists = Api(username).get_top_ten_artists()
     return to_csv_response(artists, 'top-ten')
 
 

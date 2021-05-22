@@ -4,7 +4,9 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from collections import Counter
 from tqdm import tqdm
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def init_spotify_api():
     """
@@ -19,55 +21,61 @@ def init_spotify_api():
     return spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 
-def get_top_ten_artists(username, show_progress_bar=False):
-    """
-    Fetches the ten artists that are most regularly added to the given user's Spotify playlists
-    :param username: (string) the Spotify username
-    :param show_progress_bar: (bool) whether or not to render  progress bar.
-                                Mostly used for running this script directly
-    :return: [(string: artist name, int: count)]
-    """
-    progress_bar = None
-    sp = init_spotify_api()
-    playlists = sp.user_playlists(username)
+class Api:
+    def __init__(self, username, show_progress_bar=False, sp=init_spotify_api()):
+        self.sp = sp
+        self.username = username
+        self.show_progress_bar = show_progress_bar
+        self.progress_bar = None
 
-    # get artists from playlist
-    # count each instance
-    artists = []
-    owner_playlists = [playlist for playlist in playlists.get('items') if playlist['owner']['id'] == username]
-    if show_progress_bar:
-        progress_bar = tqdm(
-            total=len(owner_playlists),
-            unit='playlist',
-            leave=False,
-        )
+    def get_top_ten_artists(self):
+        playlists = self.get_owner_playlists()
+        if self.show_progress_bar:
+            self.progress_bar = tqdm(
+                total=len(playlists),
+                unit='playlist',
+                leave=False,
+            )
+        artists = self.get_artists_from_playlists(playlists)
+        return Counter(artists).most_common(10)
 
-    for playlist in owner_playlists:
-        results = sp.user_playlist(username, playlist.get('id'), fields="tracks,next")
+    def get_owner_playlists(self):
+        return self.sp.user_playlists(self.username)
+
+    def get_artists_from_playlists(self, playlists):
+        artist_lists = [self.get_artists_from_playlist(pl) for pl in playlists.get('items')]
+        return [artist for artist_list in artist_lists for artist in artist_list]
+
+    def get_artists_from_playlist(self, playlist):
+        results = self.sp.user_playlist(username, playlist.get('id'), fields="tracks,next")
         tracks = results.get('tracks')
+        artists = self.get_artists_from_tracks(tracks)
 
+        if self.show_progress_bar and self.progress_bar is not None:
+            self.progress_bar.update()
+
+        return artists
+
+    def get_artists_from_tracks(self, tracks):
+        artists = []
         for item in tracks.get('items'):
-            artists.append(get_artist_from_item(item))
+            artists.append(self.get_artist_from_item(item))
 
         while tracks.get('next'):
-            tracks = sp.next(tracks)
+            tracks = self.sp.next(tracks)
             for item in tracks.get('items'):
-                artists.append(get_artist_from_item(item))
+                artists.append(self.get_artist_from_item(item))
 
-        if show_progress_bar and progress_bar is not None:
-            progress_bar.update()
+        return artists
 
-    return Counter(artists).most_common(10)
-
-
-def get_artist_from_item(item):
-    """
-    Looks in the given item from Spotify api to fetch the artist
-    :param item: the item as given from spotify
-    :return: (string) the artist name
-    """
-    track = item.get('track')
-    return track['artists'][0]['name']
+    def get_artist_from_item(self, item):
+        """
+        Looks in the given item from Spotify api to fetch the artist
+        :param item: the item as given from spotify
+        :return: (string) the artist name
+        """
+        track = item.get('track')
+        return track['artists'][0]['name']
 
 
 if __name__ == '__main__':
@@ -79,6 +87,6 @@ if __name__ == '__main__':
         sys.exit()
 
     print("Checking artist in each playlist: ")
-    top_ten = get_top_ten_artists(username, show_progress_bar=True)
+    top_ten = Api(username, show_progress_bar=True).get_top_ten_artists()
     for i, (artist, count) in enumerate(top_ten):
         print(f"-> {i+1}. {artist}: {count} times")
